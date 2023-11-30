@@ -1,0 +1,44 @@
+{
+  "name": "asi-node",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "esbuild src/index.ts --bundle --platform=node --target=node18 --outfile=dibuild/index.js",
+    "check:lint": "eslint . --report-unused-disable-directives",
+    "check:format": "prettier --write .",
+    "check:type": "tsc --noEmit"
+  },
+  "imports": {
+    "#domain/*": "./src/domain/*.js",
+    "#infrastructure/*": "./src/infrastructure/*.js",
+    "#controllers/*": "./src/infrastructure/controllers/*.js",
+    "#midlewares/*": "./src/infrastructure/midlewares/*.js"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.10.1",
+    "@types/stompit": "^0.26.6",
+    "@typescript-eslint/eslint-plugin": "6.13.1",
+    "@typescript-eslint/parser": "6.13.1",
+    "esbuild": "^0.19.8",
+    "eslint": "8.54.0",
+    "eslint-import-resolver-typescript": "3.6.1",
+    "eslint-plugin-import": "2.29.0",
+    "eslint-plugin-only-error": "1.0.2",
+    "eslint-plugin-simple-import-sort": "10.0.0",
+    "eslint-plugin-sonarjs": "0.23.0",
+    "eslint-plugin-unused-imports": "3.0.0",
+    "prettier": "^3.1.0",
+    "tsx": "^4.6.1",
+    "typescript": "^5.3.2"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.7.2",
+    "stompit": "^1.0.0",
+    "undici": "^5.28.2",
+    "zod": "^3.22.4"
+  }
+}
