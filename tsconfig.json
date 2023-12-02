@@ -17,6 +17,7 @@
     "resolveJsonModule": true,
     "skipDefaultLibCheck": true,
     "skipLibCheck": true,
+    "strictNullChecks": true,
     "strict": true,
     "target": "ESNext",
     "types": ["node"],
@@ -30,5 +31,7 @@
       "#controllers/*": ["./src/infrastructure/controllers/*.js"],
       "#midlewares/*": ["./src/infrastructure/midlewares/*.js"]
     }
-  }
+  },
+  "include": ["**/*"],
+  "exclude": ["node_modules", "build"]
 }
