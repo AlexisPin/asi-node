@@ -5,7 +5,10 @@ export interface ServerToClientEvents {
   notification: (message: string) => void;
 }
 
-export interface ClientToServerEvents {}
+export interface ClientToServerEvents {
+  join_room: (user_id: number) => void;
+  leave_room: (user_id: number) => void;
+}
 
 export interface InterServerEvents {
   ping: () => void;

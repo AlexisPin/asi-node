@@ -31,11 +31,21 @@ export default class SocketIORepository extends SocketRepository {
       socket.on('disconnect', () => {
         deleteUserController.handle(Number(user_id));
       });
+
+      socket.on('join_room', (dest_id: number) => {
+        const room = [user_id, dest_id].sort().join('_');
+        socket.join(room);
+      });
+
+      socket.on('leave_room', (dest_id: number) => {
+        const room = [user_id, dest_id].sort().join('_');
+        socket.leave(room);
+      });
     });
   }
 
   send_chat_message(message: SendMessageDao): Promise<SendMessageDao> {
-    this.io.emit('chat_message', message);
+    this.io.to(message.conversation_id).emit('chat_message', message);
     return Promise.resolve(message);
   }
 
