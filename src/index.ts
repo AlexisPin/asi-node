@@ -1,36 +1,29 @@
+import { Server } from 'socket.io';
+
+import DeleteUserUsecase from '#domain/usecases/delete_user_usecase';
 import GetallUserUsecase from '#domain/usecases/getall_user_usecase';
 import RegisterUserUsecase from '#domain/usecases/register_user_usecase';
+import SendChatMessageUsecase from '#domain/usecases/send_chat_message_usecase';
+import SendChatMessageController from '#infrastructure/controllers/chat_controller';
+import DeleteUserController from '#infrastructure/controllers/delete_user_controller';
 import GetAllUserController from '#infrastructure/controllers/getall_user_controller';
-import { RegisterUserController } from '#infrastructure/controllers/register_user_controller';
+import RegisterUserController from '#infrastructure/controllers/register_user_controller';
 import { HttpServer } from '#infrastructure/express/server';
 import InMemoryUserRepository from '#infrastructure/repositories/inmemory_user_repository';
-import { Server } from 'socket.io';
-import Stompit from './infrastructure/stompit';
+import SocketIORepository from '#infrastructure/socket/socket_repository';
 import type {
   ClientToServerEvents,
   InterServerEvents,
   ServerToClientEvents,
   SocketData,
 } from '#infrastructure/socket/type';
-import DeleteUserController from '#infrastructure/controllers/delete_user_controller';
-import DeleteUserUsecase from '#domain/usecases/delete_user_usecase';
-import SocketIORepository from '#infrastructure/socket/socket_repository';
-import NotificationUsecase from '#domain/usecases/notification_usecase';
-import SendMessageUsecase from '#domain/usecases/send_message_usecase';
 
-function main() {
-  const PORT = 3000;
-  const inMemoryUserRepository = new InMemoryUserRepository();
-  const registerUserUsecase = new RegisterUserUsecase(inMemoryUserRepository);
-  const getallUserUsecase = new GetallUserUsecase(inMemoryUserRepository);
-  const deleteuserUsecase = new DeleteUserUsecase(inMemoryUserRepository);
-  const registerUserController = new RegisterUserController(registerUserUsecase);
-  const getAllUserController = new GetAllUserController(getallUserUsecase);
-  const deleteUserController = new DeleteUserController(deleteuserUsecase);
-  const stompitClient = new Stompit();
-  stompitClient.connect();
+import StompitRepository from './infrastructure/stompit';
 
-  const expressHttpServer = new HttpServer(registerUserController, getAllUserController);
+const PORT = 3000;
+
+async function main() {
+  const expressHttpServer = new HttpServer();
   const httpServer = expressHttpServer.httpServer;
 
   const io = new Server<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>(
@@ -42,12 +35,38 @@ function main() {
     },
   );
 
-  const socketServer = new SocketIORepository(io, registerUserController, deleteUserController);
+  const inMemoryUserRepository = new InMemoryUserRepository();
+  const stompitRepository = new StompitRepository();
 
-  const sendMessageUsecase = new SendMessageUsecase(socketServer);
-  const notificationService = new NotificationUsecase(sendMessageUsecase, stompitClient);
+  const registerUserUsecase = new RegisterUserUsecase(inMemoryUserRepository);
+  const registerUserController = new RegisterUserController(registerUserUsecase);
 
-  expressHttpServer.run(PORT, notificationService);
+  const getallUserUsecase = new GetallUserUsecase(inMemoryUserRepository);
+  const getAllUserController = new GetAllUserController(getallUserUsecase);
+
+  const deleteuserUsecase = new DeleteUserUsecase(inMemoryUserRepository);
+  const deleteUserController = new DeleteUserController(deleteuserUsecase);
+
+  const socketIORepository = new SocketIORepository(
+    io,
+    registerUserController,
+    deleteUserController,
+  );
+
+  const sendChatMessageUsecase = new SendChatMessageUsecase(stompitRepository, socketIORepository);
+  const sendMessageController = new SendChatMessageController(sendChatMessageUsecase);
+
+  await stompitRepository.connect();
+
+  expressHttpServer.run(PORT, registerUserController, getAllUserController, sendMessageController);
 }
 
-main();
+(async () => {
+  await main();
+})()
+  .then(() => {
+    console.log(`Server running at http://localhost:${PORT}`);
+  })
+  .catch((error) => {
+    console.log(error);
+  });

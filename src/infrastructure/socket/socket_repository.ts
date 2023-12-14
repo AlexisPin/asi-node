@@ -1,4 +1,13 @@
 import type { Server } from 'socket.io';
+
+import SocketRepository, {
+  type SendMessageDao,
+} from '#domain/contracts/repositories/socket_repository';
+import { generate_id } from '#domain/utils/generate_id';
+import type DeleteUserController from '#infrastructure/controllers/delete_user_controller';
+import type RegisterUserController from '#infrastructure/controllers/register_user_controller';
+
+import { findUser } from '../undici';
 import type {
   ClientToServerEvents,
   InterServerEvents,
@@ -6,12 +15,6 @@ import type {
   ServerToClientEvents,
   SocketData,
 } from './type';
-import SocketRepository, {
-  type SendMessageDao,
-} from '#domain/contracts/repositories/socket_repository';
-import { findUser } from '../undici';
-import type { RegisterUserController } from '#infrastructure/controllers/register_user_controller';
-import type DeleteUserController from '#infrastructure/controllers/delete_user_controller';
 
 export default class SocketIORepository extends SocketRepository {
   constructor(
@@ -21,15 +24,17 @@ export default class SocketIORepository extends SocketRepository {
   ) {
     super();
     io.on('connection', async (socket) => {
-      const user_id = socket.handshake.query['id'];
-      if (
-        user_id === undefined ||
-        Array.isArray(user_id) ||
-        !Number.isSafeInteger(Number(user_id))
-      ) {
+      const id = socket.handshake.query['id'];
+      if (typeof id !== 'string') {
         socket.disconnect();
         return;
       }
+      if (isNaN(Number(id)) && isNaN(parseFloat(id))) {
+        socket.disconnect();
+        return;
+      }
+
+      const user_id = Number(id);
       const { body } = await findUser(user_id);
       const data = await body.json();
       registerUserController
@@ -42,19 +47,24 @@ export default class SocketIORepository extends SocketRepository {
         });
 
       socket.on('disconnect', () => {
-        deleteUserController.handle(Number(user_id)).then(() => {
-          this.send('users_change');
-        });
+        deleteUserController
+          .handle(Number(user_id))
+          .then(() => {
+            this.send('users_change');
+          })
+          .catch((error: unknown) => {
+            console.log(error);
+          });
       });
 
-      socket.on('join_room', (dest_id: number) => {
-        const room = [user_id, dest_id].sort().join('_');
-        socket.join(room);
+      socket.on('join_room', async (dest_id: number) => {
+        const room = generate_id(user_id, dest_id);
+        await socket.join(room);
       });
 
-      socket.on('leave_room', (dest_id: number) => {
-        const room = [user_id, dest_id].sort().join('_');
-        socket.leave(room);
+      socket.on('leave_room', async (dest_id: number) => {
+        const room = generate_id(user_id, dest_id);
+        await socket.leave(room);
       });
     });
   }

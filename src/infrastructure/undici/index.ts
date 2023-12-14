@@ -1,6 +1,10 @@
 import { Pool } from 'undici';
 
-const pool = new Pool('http://tp.cpe.fr:8083', {
+const DEV = true;
+
+const URL = DEV ? 'http://localhost:8083' : 'http://tp.cpe.fr:8083';
+
+const pool = new Pool(URL, {
   connections: 100,
   pipelining: 10,
   keepAliveTimeout: 60_000,
@@ -8,7 +12,7 @@ const pool = new Pool('http://tp.cpe.fr:8083', {
   bodyTimeout: 0,
 });
 
-export const findUser = async (id: string) => {
+export const findUser = async (id: number) => {
   return await pool.request({
     method: 'GET',
     path: `/user/${id}`,

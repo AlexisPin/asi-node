@@ -1,10 +1,10 @@
 import { registerUserSchema } from '#domain/schema/register_user_schema';
 import type RegisterUserUsecase from '#domain/usecases/register_user_usecase';
 
-export class RegisterUserController {
+export default class RegisterUserController {
   constructor(private registerUserUsecase: RegisterUserUsecase) {}
 
-  async handle(data: unknown) {
+  handle(data: unknown) {
     const body = registerUserSchema.parse(data);
 
     return this.registerUserUsecase.handle({

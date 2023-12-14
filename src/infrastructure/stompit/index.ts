@@ -1,7 +1,8 @@
-import BusRepository from '#domain/contracts/repositories/bus_repository';
 import stompit from 'stompit';
 
-export default class Stompit extends BusRepository {
+import BusRepository from '#domain/contracts/repositories/bus_repository';
+
+export default class StompitRepository extends BusRepository {
   #client: stompit.Client | null;
 
   #headers = {
@@ -37,14 +38,14 @@ export default class Stompit extends BusRepository {
     });
   }
 
-  async send_chat_message(message: string) {
+  send_chat_message(message: string) {
     if (!this.#client) return;
     const frame = this.#client.send(this.#headers);
     frame.write(message);
     frame.end();
   }
 
-  async subscribe(callback: (message: string) => void) {
+  subscribe(callback: (message: string) => void) {
     if (!this.#client) return;
     this.#client.subscribe(this.#headers, (error, message) => {
       if (error) {
