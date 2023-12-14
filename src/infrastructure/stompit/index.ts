@@ -18,7 +18,7 @@ export default class Stompit extends BusRepository {
       'heart-beat': '5000,5000',
     },
   };
-  
+
   constructor() {
     super();
     this.#client = null;

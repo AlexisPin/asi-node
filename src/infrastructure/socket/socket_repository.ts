@@ -2,6 +2,7 @@ import type { Server } from 'socket.io';
 import type {
   ClientToServerEvents,
   InterServerEvents,
+  NotificationType,
   ServerToClientEvents,
   SocketData,
 } from './type';
@@ -21,15 +22,29 @@ export default class SocketIORepository extends SocketRepository {
     super();
     io.on('connection', async (socket) => {
       const user_id = socket.handshake.query['id'];
-      if (user_id === undefined || Array.isArray(user_id) || Number.isNaN(Number(user_id))) {
+      if (
+        user_id === undefined ||
+        Array.isArray(user_id) ||
+        !Number.isSafeInteger(Number(user_id))
+      ) {
         socket.disconnect();
         return;
       }
       const { body } = await findUser(user_id);
       const data = await body.json();
-      registerUserController.handle(data);
+      registerUserController
+        .handle(data)
+        .then(() => {
+          this.send('users_change');
+        })
+        .catch((error: unknown) => {
+          console.log(error);
+        });
+
       socket.on('disconnect', () => {
-        deleteUserController.handle(Number(user_id));
+        deleteUserController.handle(Number(user_id)).then(() => {
+          this.send('users_change');
+        });
       });
 
       socket.on('join_room', (dest_id: number) => {
@@ -49,7 +64,7 @@ export default class SocketIORepository extends SocketRepository {
     return Promise.resolve(message);
   }
 
-  send(message: string): void {
+  send(message: NotificationType): void {
     this.io.emit('notification', message);
   }
 }

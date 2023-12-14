@@ -2,8 +2,10 @@ import type { SendMessageDao } from '#domain/contracts/repositories/socket_repos
 
 export interface ServerToClientEvents {
   chat_message: (message: SendMessageDao) => void;
-  notification: (message: string) => void;
+  notification: (message: NotificationType) => void;
 }
+
+export type NotificationType = 'users_change';
 
 export interface ClientToServerEvents {
   join_room: (user_id: number) => void;
