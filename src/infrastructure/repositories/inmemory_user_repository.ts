@@ -1,6 +1,7 @@
-import type { RegisterUserDao } from '#domain/contracts/repositories/user_repository';
-import UserRepository from '#domain/contracts/repositories/user_repository';
-import type { RegisterUserDto } from '#domain/dto/register_user_dto';
+import UserRepository, {
+  type CreateUserDto,
+  type RegisterUserDao,
+} from '#domain/contracts/repositories/user_repository';
 
 export default class InMemoryUserRepository implements UserRepository {
   readonly #users: RegisterUserDao[] = [];
@@ -8,13 +9,8 @@ export default class InMemoryUserRepository implements UserRepository {
   getAll(): Promise<RegisterUserDao[]> {
     return Promise.resolve(this.#users);
   }
-  save(user: RegisterUserDto): Promise<{ id: number }> {
-    this.#users.push({
-      id: user.id,
-      account: user.account,
-      cardList: user.cardList,
-      login: user.login,
-    });
+  save(user: CreateUserDto): Promise<{ id: number }> {
+    this.#users.push(user);
     return Promise.resolve({ id: user.id });
   }
 

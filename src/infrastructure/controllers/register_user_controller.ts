@@ -6,13 +6,14 @@ export default class RegisterUserController {
 
   handle(data: unknown) {
     const body = registerUserSchema.parse(data);
+    const { account, cardList, id, login, pwd } = body;
 
     return this.registerUserUsecase.handle({
-      account: body.account,
-      cardList: body.cardList,
-      id: body.id,
-      login: body.login,
-      password: body.pwd,
+      account,
+      cardList,
+      id,
+      login,
+      password: pwd,
     });
   }
 }

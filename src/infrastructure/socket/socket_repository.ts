@@ -1,7 +1,7 @@
 import type { Server } from 'socket.io';
 
 import SocketRepository, {
-  type SendMessageDao,
+  type CreateMessageDto,
 } from '#domain/contracts/repositories/socket_repository';
 import { generate_id } from '#domain/utils/generate_id';
 import type DeleteUserController from '#infrastructure/controllers/delete_user_controller';
@@ -69,7 +69,7 @@ export default class SocketIORepository extends SocketRepository {
     });
   }
 
-  send_chat_message(message: SendMessageDao): Promise<SendMessageDao> {
+  send_chat_message(message: CreateMessageDto): Promise<CreateMessageDto> {
     this.io.to(message.conversation_id).emit('chat_message', message);
     return Promise.resolve(message);
   }

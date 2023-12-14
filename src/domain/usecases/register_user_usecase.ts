@@ -1,10 +1,13 @@
+import type { RegisterUserDto } from '#domain/contracts/dto/register_user_dto';
 import UserRepository from '#domain/contracts/repositories/user_repository';
-import type { RegisterUserDto } from '#domain/dto/register_user_dto';
+import { User } from '#domain/models/user';
 
 export default class RegisterUserUsecase {
   constructor(private userRepository: UserRepository) {}
 
   handle(payload: RegisterUserDto): Promise<{ id: number }> {
-    return this.userRepository.save(payload);
+    const { id, login, account, cardList, password } = payload;
+    const user = new User(id, login, account, cardList, password);
+    return this.userRepository.save(user);
   }
 }

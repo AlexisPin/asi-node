@@ -1,7 +1,7 @@
-import type { SendMessageDao } from '#domain/contracts/repositories/socket_repository';
+import type { CreateMessageDto } from '#domain/contracts/repositories/socket_repository';
 
 export interface ServerToClientEvents {
-  chat_message: (message: SendMessageDao) => void;
+  chat_message: (message: CreateMessageDto) => void;
   notification: (message: NotificationType) => void;
 }
 
