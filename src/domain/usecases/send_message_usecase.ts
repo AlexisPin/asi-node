@@ -3,16 +3,17 @@ import type SocketRepository from '#domain/contracts/repositories/socket_reposit
 import type { MessageDto } from '#domain/dto/message_dto';
 
 export default class SendMessageUsecase {
-    constructor(private socketRepository: SocketRepository) { }
+  constructor(private socketRepository: SocketRepository) {}
 
-    handle(payload: MessageDto): SendMessageDao {
-        const conversation_id = [payload.sender_id, payload.receiver_id].sort().join('_');
-        const timestamp = new Date().getTime();
-        const message: SendMessageDao = {
-            ...payload,
-            conversation_id,
-            timestamp,
-        };
-        return this.socketRepository.send(message);
-    }
+  handle(payload: MessageDto): Promise<SendMessageDao> {
+    const conversation_id = [payload.sender_id, payload.receiver_id].sort().join('_');
+    const timestamp = new Date().getTime();
+    const { receiver_id, ...rest } = payload;
+    const message: SendMessageDao = {
+      ...rest,
+      conversation_id,
+      timestamp,
+    };
+    return this.socketRepository.send_chat_message(message);
+  }
 }

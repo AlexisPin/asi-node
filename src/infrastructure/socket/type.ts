@@ -1,17 +1,16 @@
-import type { SendMessageDao } from "#domain/contracts/repositories/socket_repository";
+import type { SendMessageDao } from '#domain/contracts/repositories/socket_repository';
 
 export interface ServerToClientEvents {
-    message: (message: SendMessageDao) => void;
+  chat_message: (message: SendMessageDao) => void;
+  notification: (message: string) => void;
 }
 
-export interface ClientToServerEvents {
-
-}
+export interface ClientToServerEvents {}
 
 export interface InterServerEvents {
-    ping: () => void;
+  ping: () => void;
 }
 
 export interface SocketData {
-    id: number;
+  id: number;
 }

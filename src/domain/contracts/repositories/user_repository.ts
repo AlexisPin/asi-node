@@ -1,17 +1,14 @@
-export interface RegisterUserDto {
-  id: string;
-  username: string;
-  email: string;
-  password: string;
-}
+import type { RegisterUserDto } from '#domain/dto/register_user_dto';
 
 export interface RegisterUserDao {
-  id: string;
-  username: string;
-  email: string;
+  id: number;
+  login: string;
+  cardList: number[];
+  account: number;
 }
 
 export default abstract class UserRepository {
-  abstract save(user: RegisterUserDto): Promise<{ id: string }>;
+  abstract save(user: RegisterUserDto): Promise<{ id: number }>;
   abstract getAll(): Promise<RegisterUserDao[]>;
+  abstract delete(id: number): Promise<{ id: number }>;
 }

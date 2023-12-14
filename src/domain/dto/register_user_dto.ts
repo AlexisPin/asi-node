@@ -1,4 +1,7 @@
-import type { registerUserSchema } from '#domain/schema/register_user_schema';
-import z from 'zod';
-
-export type RegisterUserDto = z.infer<typeof registerUserSchema>;
+export interface RegisterUserDto {
+  id: number;
+  login: string;
+  account: number;
+  cardList: number[];
+  password: string;
+}

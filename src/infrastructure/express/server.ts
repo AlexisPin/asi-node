@@ -3,40 +3,34 @@ import { ZodError } from 'zod';
 
 import type GetAllUserController from '#infrastructure/controllers/getall_user_controller';
 import { RegisterUserController } from '#infrastructure/controllers/register_user_controller';
-import { Server } from 'socket.io';
 import { createServer } from 'http';
-import type { ClientToServerEvents, InterServerEvents, ServerToClientEvents, SocketData } from '#infrastructure/socket/type';
-import SocketServer from '../socket/socket_repository';
-import { sendMessageSchema } from '#domain/schema/register_user_schema';
-import SendMessageUsecase from '#domain/usecases/send_message_usecase';
+import { sendMessageSchema } from '#domain/schema/message_schema';
+import type NotificationUsecase from '#domain/usecases/notification_usecase';
 
 export class HttpServer {
-  public static run(
-    port: number,
+  #registerUserController: RegisterUserController;
+  #getAllUserController: GetAllUserController;
+  #httpServer: ReturnType<typeof createServer>;
+  #app = express();
+
+  constructor(
     registerUserController: RegisterUserController,
     getAllUserController: GetAllUserController,
   ) {
-    const app = express();
-    const httpServer = createServer(app);
-    
-    const io = new Server<
-      ClientToServerEvents,
-      ServerToClientEvents,
-      InterServerEvents,
-      SocketData
-    >(httpServer, {
-      cors: {
-        origin: '*',
-      },
-    })
+    this.#registerUserController = registerUserController;
+    this.#getAllUserController = getAllUserController;
+    this.#httpServer = createServer(this.#app);
+  }
 
-    const socketServer = new SocketServer(io, registerUserController);
-    const sendMessageController = new SendMessageUsecase(socketServer);
+  get httpServer() {
+    return this.#httpServer;
+  }
 
-    app.use(express.json());
+  public run(port: number, notificationService: NotificationUsecase) {
+    this.#app.use(express.json());
 
-    app.post('/users', (req, res) => {
-      registerUserController
+    this.#app.post('/users', (req, res) => {
+      this.#registerUserController
         .handle(req)
         .then((data) => res.status(201).json(data))
         .catch((error: unknown) => {
@@ -48,8 +42,8 @@ export class HttpServer {
         });
     });
 
-    app.get('/users', (_, res) => {
-      getAllUserController
+    this.#app.get('/users', (_, res) => {
+      this.#getAllUserController
         .handle()
         .then((data) => res.status(200).json(data))
         .catch((error: unknown) => {
@@ -57,12 +51,12 @@ export class HttpServer {
         });
     });
 
-    app.post("/message", (req, res) => {
+    this.#app.post('/message', async (req, res) => {
       try {
-        const data = sendMessageSchema.parse(req.body); 
-        const response = sendMessageController.handle(data);
+        const data = sendMessageSchema.parse(req.body);
+        const response = await notificationService.handle(data);
         res.status(201).json(response);
-      } catch (error : unknown) {
+      } catch (error: unknown) {
         if (error instanceof ZodError) {
           res.status(400).json({ message: error.issues });
           return;
@@ -71,7 +65,7 @@ export class HttpServer {
       }
     });
 
-    httpServer.listen(port, () => {
+    this.#httpServer.listen(port, () => {
       console.log(`Server running at http://localhost:${port}`);
     });
   }
