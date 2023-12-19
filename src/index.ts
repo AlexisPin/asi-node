@@ -1,22 +1,15 @@
-import { Server } from 'socket.io';
-
 import DeleteUserUsecase from '#domain/usecases/delete_user_usecase';
 import GetallUserUsecase from '#domain/usecases/getall_user_usecase';
 import RegisterUserUsecase from '#domain/usecases/register_user_usecase';
 import SendChatMessageUsecase from '#domain/usecases/send_chat_message_usecase';
-import SendChatMessageController from '#infrastructure/controllers/chat_controller';
 import DeleteUserController from '#infrastructure/controllers/delete_user_controller';
 import GetAllUserController from '#infrastructure/controllers/getall_user_controller';
 import RegisterUserController from '#infrastructure/controllers/register_user_controller';
+import SendChatMessageController from '#infrastructure/controllers/send_chat_message_controller';
 import { HttpServer } from '#infrastructure/express/server';
 import InMemoryUserRepository from '#infrastructure/repositories/inmemory_user_repository';
-import SocketIORepository from '#infrastructure/socket/socket_repository';
-import type {
-  ClientToServerEvents,
-  InterServerEvents,
-  ServerToClientEvents,
-  SocketData,
-} from '#infrastructure/socket/type';
+import SocketIORepository from '#infrastructure/socket/socket_io_repository';
+
 
 import StompitRepository from './infrastructure/stompit';
 
@@ -24,16 +17,6 @@ const PORT = 3000;
 
 async function main() {
   const expressHttpServer = new HttpServer();
-  const httpServer = expressHttpServer.httpServer;
-
-  const io = new Server<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>(
-    httpServer,
-    {
-      cors: {
-        origin: '*',
-      },
-    },
-  );
 
   const inMemoryUserRepository = new InMemoryUserRepository();
   const stompitRepository = new StompitRepository();
@@ -48,7 +31,7 @@ async function main() {
   const deleteUserController = new DeleteUserController(deleteuserUsecase);
 
   const socketIORepository = new SocketIORepository(
-    io,
+    expressHttpServer.io,
     registerUserController,
     deleteUserController,
   );

@@ -10,7 +10,12 @@ export default class InMemoryUserRepository implements UserRepository {
     return Promise.resolve(this.#users);
   }
   save(user: CreateUserDto): Promise<{ id: number }> {
-    this.#users.push(user);
+    this.#users.push({
+      id: user.id,
+      login: user.login,
+      account: user.account,
+      cardList: user.cardList,
+    });
     return Promise.resolve({ id: user.id });
   }
 

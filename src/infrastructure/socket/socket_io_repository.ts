@@ -3,22 +3,21 @@ import type { Server } from 'socket.io';
 import SocketRepository, {
   type CreateMessageDto,
 } from '#domain/contracts/repositories/socket_repository';
+import { registerUserSchema } from '#domain/schema/register_user_schema';
 import { generate_id } from '#domain/utils/generate_id';
 import type DeleteUserController from '#infrastructure/controllers/delete_user_controller';
 import type RegisterUserController from '#infrastructure/controllers/register_user_controller';
 
-import { findUser } from '../undici';
+import { httpClient } from './http_client';
 import type {
   ClientToServerEvents,
-  InterServerEvents,
   NotificationType,
   ServerToClientEvents,
-  SocketData,
 } from './type';
 
 export default class SocketIORepository extends SocketRepository {
   constructor(
-    private io: Server<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>,
+    private io: Server<ClientToServerEvents, ServerToClientEvents>,
     registerUserController: RegisterUserController,
     deleteUserController: DeleteUserController,
   ) {
@@ -35,10 +34,15 @@ export default class SocketIORepository extends SocketRepository {
       }
 
       const user_id = Number(id);
-      const { body } = await findUser(user_id);
-      const data = await body.json();
+      const response = await httpClient.request({
+        method: 'GET',
+        path: `/user/${user_id}`,
+      });
+
+      const user = registerUserSchema.parse(await response.body.json());
+
       registerUserController
-        .handle(data)
+        .handle(user)
         .then(() => {
           this.send('users_change');
         })

@@ -11,11 +11,3 @@ export interface ClientToServerEvents {
   join_room: (user_id: number) => void;
   leave_room: (user_id: number) => void;
 }
-
-export interface InterServerEvents {
-  ping: () => void;
-}
-
-export interface SocketData {
-  id: number;
-}
