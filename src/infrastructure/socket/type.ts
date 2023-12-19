@@ -8,6 +8,9 @@ export interface ServerToClientEvents {
 export type NotificationType = 'users_change';
 
 export interface ClientToServerEvents {
-  join_room: (user_id: number) => void;
-  leave_room: (user_id: number) => void;
+  join_chat_room: (user_id: number) => void;
+  leave_chat_room: (user_id: number) => void;
+  join_game_room: (game_id: string) => void;
+  leave_game_room: (game_id: string) => void;
+  ready: () => void;
 }

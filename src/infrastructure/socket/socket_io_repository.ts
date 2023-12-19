@@ -50,6 +50,24 @@ export default class SocketIORepository extends SocketRepository {
           console.log(error);
         });
 
+      socket.on('join_chat_room', async (dest_id: number) => {
+        const room = generate_id(user_id, dest_id);
+        await socket.join(room);
+      });
+
+      socket.on('leave_chat_room', async (dest_id: number) => {
+        const room = generate_id(user_id, dest_id);
+        await socket.leave(room);
+      });
+
+      socket.on('join_game_room', async (game_id: string) => {
+        await socket.join(game_id);
+      });
+
+      socket.on('leave_game_room', async (game_id: string) => {
+        await socket.leave(game_id);
+      });
+
       socket.on('disconnect', () => {
         deleteUserController
           .handle(Number(user_id))
@@ -59,16 +77,6 @@ export default class SocketIORepository extends SocketRepository {
           .catch((error: unknown) => {
             console.log(error);
           });
-      });
-
-      socket.on('join_room', async (dest_id: number) => {
-        const room = generate_id(user_id, dest_id);
-        await socket.join(room);
-      });
-
-      socket.on('leave_room', async (dest_id: number) => {
-        const room = generate_id(user_id, dest_id);
-        await socket.leave(room);
       });
     });
   }

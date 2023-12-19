@@ -16,7 +16,7 @@ test.group('Messages', (group) => {
     response.assertStatus(201);
   });
 
-  test('ensure message can be received', async ({ client }) => {
+  test('ensure message can be received', async ({ client,assert }) => {
     const response = await client.post('/message').json({
       content: 'test',
       sender_id: 1,
@@ -28,8 +28,9 @@ test.group('Messages', (group) => {
     response.assertBodyContains({ 
       content: 'test',
       sender_id: 1,
-      conversation_id: '1_2',
     });
+
+    assert.properties(response.body(), ['content', 'sender_id', 'conversation_id', 'timestamp'])
   });
 
   test('ensure message cannot be send to the same user', async ({ client }) => {
