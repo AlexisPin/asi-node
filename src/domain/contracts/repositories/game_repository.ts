@@ -1,4 +1,4 @@
-import type { GameDto } from "../dto/game_dto";
+import type { GameState } from "#infrastructure/socket/type";
 
 export interface RegisterPlayerDto {
   id: number;
@@ -6,7 +6,7 @@ export interface RegisterPlayerDto {
 }
 
 export default abstract class GameRepository {
-  abstract create_game(game: GameDto): Promise<{id : string}>;
-  abstract update_game(game_id: string, game: GameDto): Promise<GameDto>;
-  abstract get_game(game_id: string): Promise<GameDto | undefined>;
+  abstract create_game(game: GameState): Promise<GameState>;
+  abstract update_game(game_id: string, game: GameState): Promise<GameState>;
+  abstract get_game(game_id: string): Promise<GameState | undefined>;
 }

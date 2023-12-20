@@ -1,18 +1,18 @@
 import type { RegisterPlayerDto } from "#domain/contracts/repositories/game_repository";
 import type GameRepository from "#domain/contracts/repositories/game_repository";
-import { Game } from "#domain/models/game";
-import { Player } from "#domain/models/player";
+import type { GameState } from "#infrastructure/socket/type";
 import { randomUUID } from "crypto";
 
 export default class CreateGameUsecase {
   constructor(private gameRepository: GameRepository) { }
 
-  async handle(payload: RegisterPlayerDto): Promise<{ id: string }> {
-    const id = randomUUID();
-    const PA = 10;
-    // TODO: fetch card list from api
-    const player = new Player(payload.id, payload.name, [], PA);
-    const game = new Game(id, true, player.id, { [player.id]: player });
+  async handle(payload: RegisterPlayerDto): Promise<GameState> {
+    const game = {
+      NotStarted: {
+        game_id: randomUUID(),
+        players: [payload],
+      }
+    }
     return this.gameRepository.create_game(game);
   }
 }

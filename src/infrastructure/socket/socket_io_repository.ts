@@ -16,6 +16,8 @@ import type UserRepository from '#domain/contracts/repositories/user_repository'
 import type CreateGameUsecase from '#domain/usecases/create_game_usecase';
 import type JoinGameUsecase from '#domain/usecases/join_game_usecase';
 import type GetGameUsecase from '#domain/usecases/get_game_usecase';
+import type StartGameUsecase from '#domain/usecases/start_game_usecase';
+import type UpdateGameUsecase from '#domain/usecases/update_game_usecase';
 
 export default class SocketIORepository extends SocketRepository {
   #sockets: Map<number, string> = new Map();
@@ -27,16 +29,18 @@ export default class SocketIORepository extends SocketRepository {
     createGameUsecase: CreateGameUsecase,
     joinGameUsecase: JoinGameUsecase,
     getGameUsecase: GetGameUsecase,
+    startGameUsecase: StartGameUsecase,
+    updateGameUsecase: UpdateGameUsecase,
   ) {
     super();
     io.on('connection', async (socket) => {
-      
+
       socket.on('login', async (id: number) => {
         const response = await httpClient.request({
           method: 'GET',
           path: `/user/${id}`,
         });
-  
+
         const user = registerUserSchema.parse(await response.body.json());
         userRepository
           .save({
@@ -71,37 +75,69 @@ export default class SocketIORepository extends SocketRepository {
       });
 
       socket.on('join_game_room', async (game_id, user_id, name) => {
-        joinGameUsecase.handle(game_id, {
+        const game = await joinGameUsecase.handle(game_id, {
           id: user_id,
           name
         })
         await socket.join(game_id);
-        this.io.to(game_id).emit('update_game_room', 'Choosing')
+        this.io.to(game_id).emit('update_game_room', game)
       });
 
-      socket.on('ready_game_room', async (game_id,user_id, cards) => {
+      socket.on('ready_game_room', async (game_id, user_id, cards) => {
         const game = await getGameUsecase.handle(game_id);
         if (!game) return;
-
-
-
-        this.io.to(game_id).emit('update_game_room', {
-          Playing : {
-            state : game
+        if ('Choosing' in game) {
+          const new_game = {
+            Waiting: {
+              game_id,
+              players: game.Choosing.players.map(player => ({
+                id: player.id,
+                name: player.name,
+                cards: cards
+              })),
+              ready: [user_id]
+            }
           }
-        })
+          this.io.to(game_id).emit('update_game_room', await updateGameUsecase.handle(game_id, new_game))
+        }
+        if ('Waiting' in game) {
+          const new_game = {
+            Waiting: {
+              game_id,
+              players: game.Waiting.players.map(player => ({
+                id: player.id,
+                name: player.name,
+                cards: cards
+              })),
+              ready: [...game.Waiting.ready, user_id]
+            }
+          }
+          this.io.to(game_id).emit('update_game_room', await updateGameUsecase.handle(game_id, new_game))
+        }
+        this.io.to(game_id).emit('update_game_room', await startGameUsecase.handle(game))
       });
 
-      socket.on('request_game_room', async (user_id, name) => {
-        const socket_id = this.#sockets.get(user_id);
-        if (socket_id) {
+      socket.on('request_game_room', async (friend_id, name) => {
+        const socket_id = this.#sockets.get(friend_id);
+        const user_id = this.#users.get(socket.id);
+        if (socket_id && user_id) {
           const game = await createGameUsecase.handle({
             id: user_id,
             name
           })
-          socket.join(game.id);
-          this.io.to(game.id).emit('update_game_room', 'NotStarted')
-          this.io.to(socket_id).emit('request_game_room', game.id, name);
+          if ('NotStarted' in game) {
+            socket.join(game.NotStarted.game_id);
+            this.io.to(game.NotStarted.game_id).emit('update_game_room', {
+              NotStarted: {
+                game_id: game.NotStarted.game_id,
+                players: [{
+                  id: user_id,
+                  name
+                }]
+              }
+            })
+            this.io.to(socket_id).emit('request_game_room', game.NotStarted.game_id, name);
+          }
         }
       });
 

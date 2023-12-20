@@ -1,11 +1,12 @@
 import type { GameDto } from '#domain/contracts/dto/game_dto';
+import type { RegisterPlayerDto } from '#domain/contracts/repositories/game_repository';
 import type { CreateMessageDto } from '#domain/contracts/repositories/socket_repository';
 
 export interface ServerToClientEvents {
   chat_message: (message: CreateMessageDto) => void;
   notification: (message: NotificationType) => void;
   request_game_room: (game_id: string, name: string) => void;
-  update_game_room: (status: GameStatus) => void;
+  update_game_room: (status: GameState) => void;
 }
 
 export type NotificationType = 'users_change';
@@ -21,10 +22,30 @@ export interface ClientToServerEvents {
 }
 
 
-export type GameStatus =
-  | "NotStarted"
-  | "Choosing"
-  | "Waiting"
+export type GameState =
+  | {
+    NotStarted: {
+      game_id: string;
+      players: RegisterPlayerDto[];
+    }
+  }
+  | {
+    Choosing: {
+      game_id: string;
+      players: RegisterPlayerDto[];
+    }
+  }
+  | {
+    Waiting: {
+      game_id: string;
+      players: {
+        id: number;
+        name: string;
+        cards: number[];
+      }[];
+      ready: number[];
+    }
+  }
   | {
     Playing: {
       state: GameDto;

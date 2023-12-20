@@ -7,6 +7,8 @@ export default class StompitRepository extends BusRepository {
 
   #headers = {
     destination: '/queue/chat_messages',
+    'Content-Type': 'application/json',
+    ObjectType: 'com.cpe.springboot.model.Message',
   };
 
   #connectOptions = {
@@ -27,11 +29,10 @@ export default class StompitRepository extends BusRepository {
 
   async connect() {
     return new Promise((resolve, reject) => {
-      stompit.connect(this.#connectOptions, (error, client) => {
+      this.#client = stompit.connect(this.#connectOptions, (error, client) => {
         if (error) {
           reject(error);
         } else {
-          this.#client = client;
           resolve(client);
         }
       });

@@ -1,6 +1,11 @@
+import CreateGameUsecase from '#domain/usecases/create_game_usecase';
+import GetGameUsecase from '#domain/usecases/get_game_usecase';
 import GetallUserUsecase from '#domain/usecases/getall_user_usecase';
+import JoinGameUsecase from '#domain/usecases/join_game_usecase';
 import RegisterUserUsecase from '#domain/usecases/register_user_usecase';
 import SendChatMessageUsecase from '#domain/usecases/send_chat_message_usecase';
+import StartGameUsecase from '#domain/usecases/start_game_usecase';
+import UpdateGameUsecase from '#domain/usecases/update_game_usecase';
 import GetAllUserController from '#infrastructure/controllers/getall_user_controller';
 import RegisterUserController from '#infrastructure/controllers/register_user_controller';
 import SendChatMessageController from '#infrastructure/controllers/send_chat_message_controller';
@@ -27,10 +32,20 @@ async function main() {
   const getallUserUsecase = new GetallUserUsecase(inMemoryUserRepository);
   const getAllUserController = new GetAllUserController(getallUserUsecase);
 
+  const createGameUsecase = new CreateGameUsecase(inMemoryGameRepository);
+  const joinGameUsecase = new JoinGameUsecase(inMemoryGameRepository);
+  const getGameUsecase = new GetGameUsecase(inMemoryGameRepository);
+  const startGameUsecase = new StartGameUsecase(inMemoryGameRepository);
+  const updateGameUsecase = new UpdateGameUsecase(inMemoryGameRepository);
+
   const socketIORepository = new SocketIORepository(
     expressHttpServer.io,
     inMemoryUserRepository,
-    inMemoryGameRepository,
+    createGameUsecase,
+    joinGameUsecase,
+    getGameUsecase,
+    startGameUsecase,
+    updateGameUsecase,
   );
 
   const sendChatMessageUsecase = new SendChatMessageUsecase(stompitRepository, socketIORepository);

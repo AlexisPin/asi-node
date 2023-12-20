@@ -1,24 +1,21 @@
-import type { GameDto } from '#domain/contracts/dto/game_dto';
 import type GameRepository from '#domain/contracts/repositories/game_repository';
+import type { GameState } from '#infrastructure/socket/type';
 
 
 export default class InMemoryGameRepository implements GameRepository {
-  readonly #rooms: GameDto[] = [];
-
-  create_game(game: GameDto): Promise<{ id: string; }> {
-    this.#rooms.push(game);
-    return Promise.resolve({ id: game.id });
-  }
-  update_game(game_id: string, game: GameDto): Promise<GameDto> {
-    const index = this.#rooms.findIndex((room) => room.id === game_id);
-    if (index === -1) {
-      return Promise.reject({ id: game_id });
+  readonly #rooms: Map<string, GameState> = new Map();
+  create_game(game: GameState): Promise<GameState> {
+    if ('NotStarted' in game) {
+      this.#rooms.set(game.NotStarted.game_id, game);
+      return Promise.resolve(game);
     }
-    this.#rooms[index] = game;
+    return Promise.reject('Invalid game state');
+  }
+  update_game(game_id: string, game: GameState): Promise<GameState> {
+    this.#rooms.set(game_id, game);
     return Promise.resolve(game);
   }
-  get_game(game_id: string): Promise<GameDto | undefined> {
-    const game = this.#rooms.find((room) => room.id === game_id);
-    return Promise.resolve(game);
+  get_game(game_id: string): Promise<GameState | undefined> {
+    return Promise.resolve(this.#rooms.get(game_id));
   }
 }
