@@ -1,23 +1,24 @@
 import type { GameDto } from '#domain/contracts/dto/game_dto';
-import type { CreatePlayerGameDto } from '#domain/contracts/repositories/game_repository';
 import type GameRepository from '#domain/contracts/repositories/game_repository';
 
 
 export default class InMemoryGameRepository implements GameRepository {
   readonly #rooms: GameDto[] = [];
 
-  create_game(game: CreatePlayerGameDto): Promise<{ id: string; }> {
-    throw new Error('Method not implemented.');
-  }
-
-  join_game(game_id: string, player: CreatePlayerGameDto): Promise<{ id: string; }> {
-    throw new Error('Method not implemented.');
+  create_game(game: GameDto): Promise<{ id: string; }> {
+    this.#rooms.push(game);
+    return Promise.resolve({ id: game.id });
   }
   update_game(game_id: string, game: GameDto): Promise<GameDto> {
-    throw new Error('Method not implemented.');
+    const index = this.#rooms.findIndex((room) => room.id === game_id);
+    if (index === -1) {
+      return Promise.reject({ id: game_id });
+    }
+    this.#rooms[index] = game;
+    return Promise.resolve(game);
   }
-   
-  get_game(game_id: string): Promise<GameDto> {
-    throw new Error('Method not implemented.');
+  get_game(game_id: string): Promise<GameDto | undefined> {
+    const game = this.#rooms.find((room) => room.id === game_id);
+    return Promise.resolve(game);
   }
 }

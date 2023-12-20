@@ -14,6 +14,8 @@ import type {
 } from './type';
 import type UserRepository from '#domain/contracts/repositories/user_repository';
 import type CreateGameUsecase from '#domain/usecases/create_game_usecase';
+import type JoinGameUsecase from '#domain/usecases/join_game_usecase';
+import type GetGameUsecase from '#domain/usecases/get_game_usecase';
 
 export default class SocketIORepository extends SocketRepository {
   #sockets: Map<number, string> = new Map();
@@ -23,6 +25,8 @@ export default class SocketIORepository extends SocketRepository {
     private io: Server<ClientToServerEvents, ServerToClientEvents>,
     userRepository: UserRepository,
     createGameUsecase: CreateGameUsecase,
+    joinGameUsecase: JoinGameUsecase,
+    getGameUsecase: GetGameUsecase,
   ) {
     super();
     io.on('connection', async (socket) => {
@@ -67,7 +71,7 @@ export default class SocketIORepository extends SocketRepository {
       });
 
       socket.on('join_game_room', async (game_id, user_id, name) => {
-        gameRepository.join_game(game_id, {
+        joinGameUsecase.handle(game_id, {
           id: user_id,
           name
         })
@@ -75,8 +79,11 @@ export default class SocketIORepository extends SocketRepository {
         this.io.to(game_id).emit('update_game_room', 'Choosing')
       });
 
-      socket.on('ready_game_room', async (game_id, cards) => {
-        const game = await gameRepository.get_game(game_id);
+      socket.on('ready_game_room', async (game_id,user_id, cards) => {
+        const game = await getGameUsecase.handle(game_id);
+        if (!game) return;
+
+
 
         this.io.to(game_id).emit('update_game_room', {
           Playing : {
