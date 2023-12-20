@@ -36,7 +36,7 @@ export default class SocketIORepository extends SocketRepository {
       const user_id = Number(id);
       const response = await httpClient.request({
         method: 'GET',
-        path: `/user/${user_id}`,
+        path: `/users/${user_id}`,
       });
 
       const user = registerUserSchema.parse(await response.body.json());
