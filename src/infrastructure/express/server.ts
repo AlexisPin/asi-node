@@ -1,5 +1,6 @@
 import express from 'express';
 import { createServer } from 'http';
+import cors from "cors"
 
 import type { MessageDto } from '#domain/contracts/dto/message_dto';
 import { sendMessageSchema } from '#domain/schema/message_schema';
@@ -33,6 +34,9 @@ export class HttpServer {
     sendChatMessageController: SendChatMessageController,
   ) {
     this.#app.use(express.json());
+    this.#app.use(cors({
+      origin: '*'
+    }))
 
     this.#app.get('/', (_, res) => res.status(200).json({ uptime: process.uptime() }));
 
