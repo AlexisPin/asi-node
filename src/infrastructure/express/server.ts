@@ -11,9 +11,6 @@ import { errorHandler, notFound } from '#infrastructure/middleware/exceptions';
 import { validation as validate } from '#infrastructure/middleware/validations';
 import type { ClientToServerEvents, ServerToClientEvents } from '#infrastructure/socket/type';
 import { Server } from 'socket.io';
-import type CreateGameController from '#infrastructure/controllers/create_game_controller';
-import type FindGameController from '#infrastructure/controllers/find_game_controller';
-import { registerPlayerSchema } from '#domain/schema/player_schema';
 
 export class HttpServer {
   #httpServer: ReturnType<typeof createServer>;
@@ -34,8 +31,6 @@ export class HttpServer {
     registerUserController: RegisterUserController,
     getAllUserController: GetAllUserController,
     sendChatMessageController: SendChatMessageController,
-    createGameController: CreateGameController,
-    findGameController: FindGameController,
   ) {
     this.#app.use(express.json());
 
@@ -67,26 +62,6 @@ export class HttpServer {
           next(error);
         });
     });
-
-    this.#app.post('/game/create', validate(registerPlayerSchema), (req, res, next) => {
-      createGameController
-        .handle(req.body)
-        .then((data) => res.status(201).json(data))
-        .catch((error: Error) => {
-          next(error);
-        });
-    });
-
-
-    this.#app.post('/game/find', validate(registerPlayerSchema), (req, res, next) => {
-      findGameController
-        .handle(req.body)
-        .then((data) => res.status(201).json(data))
-        .catch((error: Error) => {
-          next(error);
-        });
-    });
-
 
     this.#app.use(notFound);
 
