@@ -1,4 +1,4 @@
-import type { RegisterPlayerDto } from "#domain/contracts/repositories/game_repository";
+import type { CreatePlayerGameDto, RegisterPlayerDto } from "#domain/contracts/repositories/game_repository";
 import type GameRepository from "#domain/contracts/repositories/game_repository";
 import type SocketRepository from "#domain/contracts/repositories/socket_repository";
 import { Game } from "#domain/models/game";
@@ -8,7 +8,7 @@ import { randomUUID } from "crypto";
 export default class CreateGameUsecase {
   constructor(private gameRepository: GameRepository, private socketRepository : SocketRepository) { }
 
-  async handle(payload: RegisterPlayerDto): Promise<{ id: string }> {
+  async handle(payload: CreatePlayerGameDto): Promise<{ id: string }> {
     const id = randomUUID();
     const PA = 10;
     // TODO: fetch card list from api

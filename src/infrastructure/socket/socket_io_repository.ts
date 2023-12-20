@@ -1,4 +1,4 @@
-import type { Server, Socket } from 'socket.io';
+import type { Server } from 'socket.io';
 
 import SocketRepository, {
   type CreateMessageDto,
@@ -12,8 +12,8 @@ import type {
   NotificationType,
   ServerToClientEvents,
 } from './type';
-import type GameRepository from '#domain/contracts/repositories/game_repository';
 import type UserRepository from '#domain/contracts/repositories/user_repository';
+import type CreateGameUsecase from '#domain/usecases/create_game_usecase';
 
 export default class SocketIORepository extends SocketRepository {
   #sockets: Map<number, string> = new Map();
@@ -22,7 +22,7 @@ export default class SocketIORepository extends SocketRepository {
   constructor(
     private io: Server<ClientToServerEvents, ServerToClientEvents>,
     userRepository: UserRepository,
-    gameRepository: GameRepository,
+    createGameUsecase: CreateGameUsecase,
   ) {
     super();
     io.on('connection', async (socket) => {
@@ -44,6 +44,7 @@ export default class SocketIORepository extends SocketRepository {
           })
           .then(() => {
             this.#sockets.set(id, socket.id);
+            this.#users.set(socket.id, id);
             this.send('users_change');
           })
           .catch((error: unknown) => {
@@ -87,7 +88,7 @@ export default class SocketIORepository extends SocketRepository {
       socket.on('request_game_room', async (user_id, name) => {
         const socket_id = this.#sockets.get(user_id);
         if (socket_id) {
-          const game = await gameRepository.create_game({
+          const game = await createGameUsecase.handle({
             id: user_id,
             name
           })
