@@ -24,8 +24,8 @@ export default class SendChatMessageUsecase {
 
     const busPayload = {
       content: payload.content,
-      sender_id: payload.sender_id,
-      receiver_id: payload.receiver_id,
+      senderId: payload.sender_id,
+      receiverId: payload.receiver_id,
       timestamp,
     };
 

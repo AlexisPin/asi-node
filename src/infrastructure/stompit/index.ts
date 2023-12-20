@@ -8,7 +8,7 @@ export default class StompitRepository extends BusRepository {
   #headers = {
     destination: '/queue/chat_messages',
     'Content-Type': 'application/json',
-    ObjectType: 'com.cpe.springboot.model.Message',
+    ObjectType: 'com.cpe.springboot.msgreceiver.Message',
   };
 
   #connectOptions = {
