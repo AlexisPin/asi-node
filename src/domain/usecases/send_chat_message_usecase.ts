@@ -22,7 +22,14 @@ export default class SendChatMessageUsecase {
       timestamp,
     );
 
-    this.busRepository.send_chat_message(JSON.stringify(message));
+    const busPayload = {
+      content: payload.content,
+      sender_id: payload.sender_id,
+      receiver_id: payload.receiver_id,
+      timestamp,
+    };
+
+    this.busRepository.send_chat_message(JSON.stringify(busPayload));
     return this.socketRepository.send_chat_message(message);
   }
 }

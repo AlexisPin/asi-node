@@ -1,6 +1,6 @@
 import type { Card } from "#domain/schema/card_schema";
 
-export interface CreatePlayerDto {
+export interface PlayerDto {
   id: number;
   name: string;
   cards: GameCard[];

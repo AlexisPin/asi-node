@@ -1,12 +1,11 @@
-import DeleteUserUsecase from '#domain/usecases/delete_user_usecase';
 import GetallUserUsecase from '#domain/usecases/getall_user_usecase';
 import RegisterUserUsecase from '#domain/usecases/register_user_usecase';
 import SendChatMessageUsecase from '#domain/usecases/send_chat_message_usecase';
-import DeleteUserController from '#infrastructure/controllers/delete_user_controller';
 import GetAllUserController from '#infrastructure/controllers/getall_user_controller';
 import RegisterUserController from '#infrastructure/controllers/register_user_controller';
 import SendChatMessageController from '#infrastructure/controllers/send_chat_message_controller';
 import { HttpServer } from '#infrastructure/express/server';
+import InMemoryGameRepository from '#infrastructure/repositories/inmemory_game_repository';
 import InMemoryUserRepository from '#infrastructure/repositories/inmemory_user_repository';
 import SocketIORepository from '#infrastructure/socket/socket_io_repository';
 
@@ -19,6 +18,7 @@ async function main() {
   const expressHttpServer = new HttpServer();
 
   const inMemoryUserRepository = new InMemoryUserRepository();
+  const inMemoryGameRepository = new InMemoryGameRepository();
   const stompitRepository = new StompitRepository();
 
   const registerUserUsecase = new RegisterUserUsecase(inMemoryUserRepository);
@@ -27,13 +27,10 @@ async function main() {
   const getallUserUsecase = new GetallUserUsecase(inMemoryUserRepository);
   const getAllUserController = new GetAllUserController(getallUserUsecase);
 
-  const deleteuserUsecase = new DeleteUserUsecase(inMemoryUserRepository);
-  const deleteUserController = new DeleteUserController(deleteuserUsecase);
-
   const socketIORepository = new SocketIORepository(
     expressHttpServer.io,
-    registerUserController,
-    deleteUserController,
+    inMemoryUserRepository,
+    inMemoryGameRepository,
   );
 
   const sendChatMessageUsecase = new SendChatMessageUsecase(stompitRepository, socketIORepository);
