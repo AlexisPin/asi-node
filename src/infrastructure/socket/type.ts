@@ -42,8 +42,8 @@ export type GameState =
         id: number;
         name: string;
         cards: number[];
+        ready: boolean;
       }[];
-      ready: number[];
     }
   }
   | {

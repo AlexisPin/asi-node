@@ -2,7 +2,7 @@ import { Pool } from 'undici';
 
 const DEV = true;
 
-const URL = DEV ? 'http://localhost:8083' : 'http://tp.cpe.fr:8083';
+const URL = DEV ? 'http://172.25.144.1:8083' : 'http://tp.cpe.fr:8083';
 
 export const httpClient = new Pool(URL, {
   connections: 128,

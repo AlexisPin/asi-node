@@ -3,10 +3,8 @@ import type { Server } from 'socket.io';
 import SocketRepository, {
   type CreateMessageDto,
 } from '#domain/contracts/repositories/socket_repository';
-import { registerUserSchema } from '#domain/schema/register_user_schema';
 import { generate_id } from '#domain/utils/generate_id';
 
-import { httpClient } from './http_client';
 import type {
   ClientToServerEvents,
   NotificationType,
@@ -18,6 +16,7 @@ import type JoinGameUsecase from '#domain/usecases/join_game_usecase';
 import type GetGameUsecase from '#domain/usecases/get_game_usecase';
 import type StartGameUsecase from '#domain/usecases/start_game_usecase';
 import type UpdateGameUsecase from '#domain/usecases/update_game_usecase';
+import { getUser } from '#domain/utils/get_user';
 
 export default class SocketIORepository extends SocketRepository {
   #sockets: Map<number, string> = new Map();
@@ -36,12 +35,8 @@ export default class SocketIORepository extends SocketRepository {
     io.on('connection', async (socket) => {
 
       socket.on('login', async (id: number) => {
-        const response = await httpClient.request({
-          method: 'GET',
-          path: `/user/${id}`,
-        });
 
-        const user = registerUserSchema.parse(await response.body.json());
+        const user = await getUser(id);
         userRepository
           .save({
             account: user.account,
@@ -93,12 +88,13 @@ export default class SocketIORepository extends SocketRepository {
               players: game.Choosing.players.map(player => ({
                 id: player.id,
                 name: player.name,
-                cards: cards
+                cards: player.id === user_id ? cards : [],
+                ready: player.id === user_id ? true : false
               })),
-              ready: [user_id]
             }
           }
-          this.io.to(game_id).emit('update_game_room', await updateGameUsecase.handle(game_id, new_game))
+          socket.emit('update_game_room', await updateGameUsecase.handle(game_id, new_game))
+          return;
         }
         if ('Waiting' in game) {
           const new_game = {
@@ -107,14 +103,13 @@ export default class SocketIORepository extends SocketRepository {
               players: game.Waiting.players.map(player => ({
                 id: player.id,
                 name: player.name,
-                cards: cards
+                cards: player.id === user_id ? cards : player.cards,
+                ready: player.id === user_id ? true : player.ready
               })),
-              ready: [...game.Waiting.ready, user_id]
             }
           }
-          this.io.to(game_id).emit('update_game_room', await updateGameUsecase.handle(game_id, new_game))
+          this.io.to(game_id).emit('update_game_room', await startGameUsecase.handle(new_game))
         }
-        this.io.to(game_id).emit('update_game_room', await startGameUsecase.handle(game))
       });
 
       socket.on('request_game_room', async (friend_id, name) => {
