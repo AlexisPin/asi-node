@@ -19,6 +19,8 @@ export interface ClientToServerEvents {
   request_game_room: (user_id: number, name: string) => void;
   leave_game_room: (game_id: string) => void;
   ready_game_room: (game_id: string, user_id: number, cards: number[]) => void;
+  attack: (game_id: string, target: number, card: number) => void;
+  end_turn: (game_id: string,) => void;
 }
 
 

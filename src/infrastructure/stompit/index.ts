@@ -12,7 +12,7 @@ export default class StompitRepository extends BusRepository {
   };
 
   #connectOptions = {
-    host: '172.17.0.2',
+    host: '172.25.144.1',
     port: 61613,
     connectHeaders: {
       'host': '/',

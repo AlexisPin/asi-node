@@ -63,5 +63,5 @@ async function main() {
     console.log(`Server running at http://localhost:${PORT}`);
   })
   .catch((error) => {
-    console.log(error);
+    console.log({error});
   });

@@ -7,6 +7,7 @@ import { generate_id } from '#domain/utils/generate_id';
 
 import type {
   ClientToServerEvents,
+  GameState,
   NotificationType,
   ServerToClientEvents,
 } from './type';
@@ -17,6 +18,7 @@ import type GetGameUsecase from '#domain/usecases/get_game_usecase';
 import type StartGameUsecase from '#domain/usecases/start_game_usecase';
 import type UpdateGameUsecase from '#domain/usecases/update_game_usecase';
 import { getUser } from '#domain/utils/get_user';
+import { CardState, type GameCard, type PlayerDto } from '#domain/contracts/dto/player_dto';
 
 export default class SocketIORepository extends SocketRepository {
   #sockets: Map<number, string> = new Map();
@@ -51,7 +53,7 @@ export default class SocketIORepository extends SocketRepository {
             this.send('users_change');
           })
           .catch((error: unknown) => {
-            console.log(error);
+            console.log({ error });
           });
       });
 
@@ -149,8 +151,79 @@ export default class SocketIORepository extends SocketRepository {
             this.send('users_change');
           })
           .catch((error: unknown) => {
-            console.log(error);
+            console.log({ error });
           });
+      });
+
+      socket.on('attack', async (game_id, target, card) => {
+        const game = await getGameUsecase.handle(game_id);
+        if (!game) return;
+        if ('Playing' in game) {
+          const turn_data = this.extract_players_cards(game, game.Playing.state.turn, card, target);
+          if (!turn_data) return;
+          const { player, opponent, attack_card, target_card } = turn_data;
+          if (player.pa < 1) return;
+
+          if (target_card.state === CardState.DEAD) return;
+
+          const hp_remain = target_card.hp - attack_card.attack;
+          if (hp_remain > 0) {
+            target_card.hp = hp_remain;
+          } else {
+            target_card.hp = 0;
+            target_card.state = CardState.DEAD;
+          }
+
+          const new_game = {
+            Playing: {
+              state: {
+                ...game.Playing.state,
+                players: {
+                  ...game.Playing.state.players,
+                  [player.id]: {
+                    ...player,
+                    cards: player.cards.map(c => c.id === card ? attack_card : c),
+                    pa: player.pa - 1,
+                  },
+                  [opponent.id]: {
+                    ...opponent,
+                    cards: opponent.cards.map(c => c.id === target ? target_card : c),
+                  }
+                }
+              }
+            }
+          }
+          this.io.to(game_id).emit('update_game_room', await updateGameUsecase.handle(game_id, new_game))
+        }
+      });
+
+      socket.on('end_turn', async (game_id) => {
+        const game = await getGameUsecase.handle(game_id);
+        if (!game) return;
+        if ('Playing' in game) {
+          const user_id = game.Playing.state.turn;
+          const current_player = Object.values(game.Playing.state.players).find(player => player.id === user_id);
+          if (!current_player) return;
+          const opponent = Object.values(game.Playing.state.players).find(player => player.id !== user_id);
+          if (!opponent) return;
+          const turn = opponent.id;
+          const new_game = {
+            Playing: {
+              state: {
+                ...game.Playing.state,
+                turn,
+                players: {
+                  ...game.Playing.state.players,
+                  [opponent.id]: {
+                    ...opponent,
+                    pa: opponent.pa + 3 > 10 ? 10 : opponent.pa + 3,
+                  }
+                }
+              }
+            }
+          }
+          this.io.to(game_id).emit('update_game_room', await updateGameUsecase.handle(game_id, new_game))
+        }
       });
     });
   }
@@ -162,5 +235,18 @@ export default class SocketIORepository extends SocketRepository {
 
   send(message: NotificationType): void {
     this.io.emit('notification', message);
+  }
+
+  extract_players_cards(game_state: GameState, user_id: number, card: number, target: number): { player: PlayerDto, opponent: PlayerDto, attack_card: GameCard, target_card: GameCard } | undefined {
+    if (!('Playing' in game_state)) return;
+    const game = game_state.Playing.state;
+    const player = Object.values(game.players).find(player => player.id === user_id);
+    if (!player) return;
+    const opponent = Object.values(game.players).find(player => player.id !== user_id);
+    if (!opponent) return;
+    const attack_card = player.cards.find(c => c.id === card);
+    const target_card = opponent.cards.find(c => c.id === target);
+    if (!attack_card || !target_card) return;
+    return { player, opponent, attack_card, target_card };
   }
 }
