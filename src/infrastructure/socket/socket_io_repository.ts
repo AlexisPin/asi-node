@@ -19,6 +19,7 @@ import type StartGameUsecase from '#domain/usecases/start_game_usecase';
 import type UpdateGameUsecase from '#domain/usecases/update_game_usecase';
 import { getUser } from '#domain/utils/get_user';
 import { CardState, type GameCard, type PlayerDto } from '#domain/contracts/dto/player_dto';
+import type SendUpdateUserEndGameUsecase from '#domain/usecases/send_update_user_end_game_usecase';
 
 export default class SocketIORepository extends SocketRepository {
   #sockets: Map<number, string> = new Map();
@@ -32,12 +33,11 @@ export default class SocketIORepository extends SocketRepository {
     getGameUsecase: GetGameUsecase,
     startGameUsecase: StartGameUsecase,
     updateGameUsecase: UpdateGameUsecase,
+    updateUserEndGame: SendUpdateUserEndGameUsecase,
   ) {
     super();
     io.on('connection', async (socket) => {
-
       socket.on('login', async (id: number) => {
-
         const user = await getUser(id);
         userRepository
           .save({
@@ -45,7 +45,7 @@ export default class SocketIORepository extends SocketRepository {
             cardList: user.cardList,
             id: user.id,
             login: user.login,
-            password: user.pwd
+            password: user.pwd,
           })
           .then(() => {
             this.#sockets.set(id, socket.id);
@@ -74,10 +74,10 @@ export default class SocketIORepository extends SocketRepository {
       socket.on('join_game_room', async (game_id, user_id, name) => {
         const game = await joinGameUsecase.handle(game_id, {
           id: user_id,
-          name
-        })
+          name,
+        });
         await socket.join(game_id);
-        this.io.to(game_id).emit('update_game_room', game)
+        this.io.to(game_id).emit('update_game_room', game);
       });
 
       socket.on('ready_game_room', async (game_id, user_id, cards) => {
@@ -87,30 +87,30 @@ export default class SocketIORepository extends SocketRepository {
           const new_game = {
             Waiting: {
               game_id,
-              players: game.Choosing.players.map(player => ({
+              players: game.Choosing.players.map((player) => ({
                 id: player.id,
                 name: player.name,
                 cards: player.id === user_id ? cards : [],
-                ready: player.id === user_id ? true : false
+                ready: player.id === user_id ? true : false,
               })),
-            }
-          }
-          socket.emit('update_game_room', await updateGameUsecase.handle(game_id, new_game))
+            },
+          };
+          socket.emit('update_game_room', await updateGameUsecase.handle(game_id, new_game));
           return;
         }
         if ('Waiting' in game) {
           const new_game = {
             Waiting: {
               game_id,
-              players: game.Waiting.players.map(player => ({
+              players: game.Waiting.players.map((player) => ({
                 id: player.id,
                 name: player.name,
                 cards: player.id === user_id ? cards : player.cards,
-                ready: player.id === user_id ? true : player.ready
+                ready: player.id === user_id ? true : player.ready,
               })),
-            }
-          }
-          this.io.to(game_id).emit('update_game_room', await startGameUsecase.handle(new_game))
+            },
+          };
+          this.io.to(game_id).emit('update_game_room', await startGameUsecase.handle(new_game));
         }
       });
 
@@ -120,19 +120,21 @@ export default class SocketIORepository extends SocketRepository {
         if (socket_id && user_id) {
           const game = await createGameUsecase.handle({
             id: user_id,
-            name
-          })
+            name,
+          });
           if ('NotStarted' in game) {
             socket.join(game.NotStarted.game_id);
             this.io.to(game.NotStarted.game_id).emit('update_game_room', {
               NotStarted: {
                 game_id: game.NotStarted.game_id,
-                players: [{
-                  id: user_id,
-                  name
-                }]
-              }
-            })
+                players: [
+                  {
+                    id: user_id,
+                    name,
+                  },
+                ],
+              },
+            });
             this.io.to(socket_id).emit('request_game_room', game.NotStarted.game_id, name);
           }
         }
@@ -173,27 +175,59 @@ export default class SocketIORepository extends SocketRepository {
             target_card.hp = 0;
             target_card.state = CardState.DEAD;
           }
-
-          const new_game = {
-            Playing: {
-              state: {
-                ...game.Playing.state,
-                players: {
-                  ...game.Playing.state.players,
-                  [player.id]: {
-                    ...player,
-                    cards: player.cards.map(c => c.id === card ? attack_card : c),
-                    pa: player.pa - 1,
+          if (opponent.cards.every((card) => card.state === CardState.DEAD)) {
+            const end_game = {
+              Playing: {
+                state: {
+                  ...game.Playing.state,
+                  players: {
+                    ...game.Playing.state.players,
+                    [player.id]: {
+                      ...player,
+                      cards: player.cards.map((c) => (c.id === card ? attack_card : c)),
+                      pa: player.pa - 1,
+                    },
+                    [opponent.id]: {
+                      ...opponent,
+                      cards: opponent.cards.map((c) => (c.id === target ? target_card : c)),
+                    },
                   },
-                  [opponent.id]: {
-                    ...opponent,
-                    cards: opponent.cards.map(c => c.id === target ? target_card : c),
-                  }
-                }
-              }
-            }
+                },
+              },
+              Finished: {
+                winner: player.id,
+                loser: opponent.id,
+              },
+            };
+            this.io
+              .to(game_id)
+              .emit('update_game_room', await updateGameUsecase.handle(game_id, end_game));
+            const user = await getUser(player.id);
+            updateUserEndGame.handle({ ...user, account: user.account + 200 });
+          } else {
+            const new_game = {
+              Playing: {
+                state: {
+                  ...game.Playing.state,
+                  players: {
+                    ...game.Playing.state.players,
+                    [player.id]: {
+                      ...player,
+                      cards: player.cards.map((c) => (c.id === card ? attack_card : c)),
+                      pa: player.pa - 1,
+                    },
+                    [opponent.id]: {
+                      ...opponent,
+                      cards: opponent.cards.map((c) => (c.id === target ? target_card : c)),
+                    },
+                  },
+                },
+              },
+            };
+            this.io
+              .to(game_id)
+              .emit('update_game_room', await updateGameUsecase.handle(game_id, new_game));
           }
-          this.io.to(game_id).emit('update_game_room', await updateGameUsecase.handle(game_id, new_game))
         }
       });
 
@@ -202,9 +236,13 @@ export default class SocketIORepository extends SocketRepository {
         if (!game) return;
         if ('Playing' in game) {
           const user_id = game.Playing.state.turn;
-          const current_player = Object.values(game.Playing.state.players).find(player => player.id === user_id);
+          const current_player = Object.values(game.Playing.state.players).find(
+            (player) => player.id === user_id,
+          );
           if (!current_player) return;
-          const opponent = Object.values(game.Playing.state.players).find(player => player.id !== user_id);
+          const opponent = Object.values(game.Playing.state.players).find(
+            (player) => player.id !== user_id,
+          );
           if (!opponent) return;
           const turn = opponent.id;
           const new_game = {
@@ -217,12 +255,14 @@ export default class SocketIORepository extends SocketRepository {
                   [opponent.id]: {
                     ...opponent,
                     pa: opponent.pa + 3 > 10 ? 10 : opponent.pa + 3,
-                  }
-                }
-              }
-            }
-          }
-          this.io.to(game_id).emit('update_game_room', await updateGameUsecase.handle(game_id, new_game))
+                  },
+                },
+              },
+            },
+          };
+          this.io
+            .to(game_id)
+            .emit('update_game_room', await updateGameUsecase.handle(game_id, new_game));
         }
       });
     });
@@ -237,15 +277,22 @@ export default class SocketIORepository extends SocketRepository {
     this.io.emit('notification', message);
   }
 
-  extract_players_cards(game_state: GameState, user_id: number, card: number, target: number): { player: PlayerDto, opponent: PlayerDto, attack_card: GameCard, target_card: GameCard } | undefined {
+  extract_players_cards(
+    game_state: GameState,
+    user_id: number,
+    card: number,
+    target: number,
+  ):
+    | { player: PlayerDto; opponent: PlayerDto; attack_card: GameCard; target_card: GameCard }
+    | undefined {
     if (!('Playing' in game_state)) return;
     const game = game_state.Playing.state;
-    const player = Object.values(game.players).find(player => player.id === user_id);
+    const player = Object.values(game.players).find((player) => player.id === user_id);
     if (!player) return;
-    const opponent = Object.values(game.players).find(player => player.id !== user_id);
+    const opponent = Object.values(game.players).find((player) => player.id !== user_id);
     if (!opponent) return;
-    const attack_card = player.cards.find(c => c.id === card);
-    const target_card = opponent.cards.find(c => c.id === target);
+    const attack_card = player.cards.find((c) => c.id === card);
+    const target_card = opponent.cards.find((c) => c.id === target);
     if (!attack_card || !target_card) return;
     return { player, opponent, attack_card, target_card };
   }

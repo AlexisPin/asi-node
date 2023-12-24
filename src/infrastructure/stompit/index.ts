@@ -5,10 +5,16 @@ import BusRepository from '#domain/contracts/repositories/bus_repository';
 export default class StompitRepository extends BusRepository {
   #client: stompit.Client | null;
 
-  #headers = {
-    destination: '/queue/chat_messages',
+  #chat_headers = {
+    'destination': '/queue/chat_messages',
     'Content-Type': 'application/json',
-    ObjectType: 'com.cpe.springboot.msgreceiver.Message',
+    'ObjectType': 'com.cpe.springboot.msgreceiver.Message',
+  };
+
+  #user_headers = {
+    'destination': '/queue/update_user',
+    'Content-Type': 'application/json',
+    'ObjectType': 'com.model.RichUserDTO',
   };
 
   #connectOptions = {
@@ -41,14 +47,35 @@ export default class StompitRepository extends BusRepository {
 
   send_chat_message(message: string) {
     if (!this.#client) return;
-    const frame = this.#client.send(this.#headers);
+    const frame = this.#client.send(this.#chat_headers);
+    frame.write(message);
+    frame.end();
+  }
+
+  send_user_update(message: string) {
+    if (!this.#client) return;
+    const frame = this.#client.send(this.#user_headers);
     frame.write(message);
     frame.end();
   }
 
   subscribe(callback: (message: string) => void) {
     if (!this.#client) return;
-    this.#client.subscribe(this.#headers, (error, message) => {
+    this.#client.subscribe(this.#chat_headers, (error, message) => {
+      if (error) {
+        console.log('subscribe error ' + error.message);
+        return;
+      }
+      message.readString('utf-8', (error, body) => {
+        if (error) {
+          console.log('read message error ' + error.message);
+          return;
+        }
+        if (!body) return;
+        callback(body);
+      });
+    });
+    this.#client.subscribe(this.#user_headers, (error, message) => {
       if (error) {
         console.log('subscribe error ' + error.message);
         return;
