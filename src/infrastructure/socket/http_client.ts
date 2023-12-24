@@ -10,5 +10,5 @@ export const httpClient = new Pool(URL, {
   connect: {
     keepAlive: true,
     rejectUnauthorized: false,
-  }
+  },
 });
